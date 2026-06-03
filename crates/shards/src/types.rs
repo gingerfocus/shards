@@ -8,17 +8,9 @@
 //! When using rust it is recomended to construct it using the Ast type an
 //! then convert it to the other. Other languages can either use the interface
 //! directly or to use a package that abstracts this interface.
-#![deny(
-    // missing_docs,
-    missing_debug_implementations,
-    rust_2018_idioms,
-    unused_imports,
-    dead_code,
-    unused_crate_dependencies
-)]
-// #![feature(vec_into_raw_parts)]
 
-pub type ParseFuncSig = fn(*const u8, usize) -> libshards_sys::ShardsAst;
+// pub type ParseFuncSig = fn(*const u8, usize) -> libshards_sys::ShardsAst;
+pub type ParseFuncSig = fn(*const u8, usize) -> Ast;
 
 /// Marker Trait
 pub trait ParseFunction {
@@ -54,15 +46,15 @@ impl ParseFunction for ParseFuncSig {
         //
         // }
         // .map_err(|e| log::error!("{e:?}"))
-        return None;
+        // return None;
     }
 }
 
 // use libshards_sys::ParseError;
-pub use libshards_sys::{
-    ShardsAst,
-    // ShardsIdentifier, ShardsOperation, ShardsToken, ShardsType, ShardsValue,
-};
+// pub use libshards_sys::{
+//     ShardsAst,
+//     // ShardsIdentifier, ShardsOperation, ShardsToken, ShardsType, ShardsValue,
+// };
 
 // TODO: find all these missing impls
 //
@@ -81,31 +73,13 @@ pub struct Ast {
     pub tokens: Vec<Token>,
 }
 
-impl From<Ast> for libshards_sys::ShardsAst {
-    /// Turns a valid ast into a an ast that can pass properly pass through
-    /// library boundieres.
-    ///
-    /// # Safety
-    /// Leaks the tokens of this ast. The person who recives the ast after this
-    /// is responsible for freeing the memory.
-    fn from(value: Ast) -> Self {
-        todo!();
-
-        // let data = value
-        //     .tokens
-        //     .iter()
-        //     .cloned()
-        //     .map(Into::<libshards_sys::ShardsToken>::into)
-        //     .collect::<Vec<libshards_sys::ShardsToken>>()
-        //     .leak();
-        //
-        // libshards_core::ShardsAst {
-        //     is_valid: true,
-        //     tokens_count: data.len(),
-        //     tokens_pointer: data.as_mut_ptr(),
-        // }
-    }
-}
+// Turns a valid ast into a an ast that can pass properly pass through
+// library boundieres.
+//
+// # Safety
+// Leaks the tokens of this ast. The person who recives the ast after this
+// is responsible for freeing the memory.
+// impl From<Ast> for libshards_sys::ShardsAst {
 
 // impl From<Option<Ast>> for ShardsAst {
 //     fn from(value: Option<Ast>) -> Self {
@@ -286,3 +260,134 @@ pub enum Value {
 //         }
 //     }
 // }
+
+// ---TODO------------------------------------------------------------------
+// #include <stdlib.h>
+//
+// struct ShardsSlice {
+//   void *ptr;
+//   size_t len;
+// };
+// enum ShardsParseError { Invalid, BadToken };
+//
+// enum ShardsAstState { Errors, Tokens };
+//
+// struct ShardsAst {
+//   enum ShardsAstState state;
+//
+//   union {
+//     enum ShardsParseError error;
+//     struct ShardsSlice datas;
+//   } infos;
+// };
+//
+// ----------------------------------------------------------------------
+
+// #[repr(C)]
+// #[derive(Debug)]
+// pub enum ShardsToken {
+//     Identifier(ShardsIdentifier),
+//     Operation(ShardsOperation),
+// }
+//
+// #[repr(C)]
+// #[derive(Debug)]
+// pub enum ShardsIdentifier {
+//     Variable { name: FfiString },
+//     Literal { val: ShardsValue },
+// }
+//
+// #[repr(C)]
+// #[derive(Debug)]
+// pub enum ShardsOperation {
+//     // Takes the raw parts of an owned String
+//     ScriptCall(FfiString),
+//     Add,
+//     Subtract,
+//     Multiply,
+// }
+//
+// #[repr(C)]
+// #[derive(Debug)]
+// pubns struct ShardsValue {
+//     /// A type hint for what the data is. Can use the None value to let
+//     /// it be guessed
+//     pub variable_type: ShardsType,
+//     // A collection of bytes that make up the data
+//     pub data: Box<[u8]>,
+// }
+//
+// #[repr(C)]
+// #[derive(Debug)]
+// pub enum ShardsType {
+//     /// Useful for languages that are not strongly typed
+//     Untyped,
+//     U32,
+//     U64,
+//     I32,
+//     I64,
+//     // String,
+//     // Array(Type),
+// }
+//
+// #[repr(C)]
+// #[derive(Debug)]
+// pub struct FfiString {
+//     pub ptr: *mut u8,
+//     pub len: usize,
+//     pub cap: usize,
+// }
+//
+// impl From<String> for FfiString {
+//     fn from(value: String) -> Self {
+//         let (ptr, len, cap) = value.into_raw_parts();
+//         Self { ptr, len, cap }
+//     }
+// }
+//
+// impl TryFrom<FfiString> for String {
+//     type Error = resu::Report<FfiStringError>;
+//
+//     fn try_from(value: FfiString) -> Result<Self, Self::Error> {
+//         if value.ptr.is_null() {
+//             return Err(resu::Report::new(FfiStringError::Null));
+//         }
+//
+//         Ok(unsafe { String::from_raw_parts(value.ptr, value.len, value.cap) })
+//     }
+// }
+//
+// impl Drop for FfiString {
+//     fn drop(&mut self) {
+//         log::error!("FfiString [`Drop`]ed while value leaked. This is likely a memory leak.")
+//     }
+// }
+//
+// #[derive(Debug)]
+// pub enum FfiStringError {
+//     Null,
+// }
+// impl fmt::Display for FfiStringError {
+//     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+//         match self {
+//             FfiStringError::Null => f.write_str("pointer was null"),
+//         }
+//     }
+// }
+// impl resu::Context for FfiStringError {}
+
+// } const ShardsAst = extern struct {
+//   typed : ShardsAstType, datas : ShardsAstData
+
+// const ShardsAstType = enum(usize){
+//     errors,
+//     tokens,
+// };
+//
+// const ShardsAstTokenData = extern struct { data : *ShardsToken, size : usize,
+// }; const ShardsAstData = extern union {
+//   errors : ParseError, tokens : ShardsAstTokenData
+// };
+// const ShardsToken = struct {};
+//
+// const ParseError = enum(u8){Invalid, BadToken};

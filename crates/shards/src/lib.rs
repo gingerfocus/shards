@@ -1,3 +1,13 @@
+// #![deny(
+//     // missing_docs,
+//     missing_debug_implementations,
+//     rust_2018_idioms,
+//     unused_imports,
+//     dead_code,
+//     unused_crate_dependencies
+// )]
+// #![feature(vec_into_raw_parts)]
+
 // mod builtins;
 // mod config;
 // mod env;
@@ -5,73 +15,12 @@
 // mod pipes;
 
 mod ast;
-mod cli;
 // mod jit;
-mod line;
 mod parser;
 mod prelude;
-
-use std::mem;
-use std::{fs::File, io, path::PathBuf};
+mod types;
 
 use crate::prelude::*;
-
-fn main() -> std::process::ExitCode {
-    match shards() {
-        Ok(()) => std::process::ExitCode::SUCCESS,
-        Err(e) => {
-            eprintln!("{:?}", e);
-            return std::process::ExitCode::FAILURE;
-        }
-    }
-}
-
-fn shards() -> Result<(), ShardsError> {
-    let args = RushiArgs::gen();
-
-    args.debug.then(|| {
-        let name = args
-            .debug_file
-            .clone()
-            .unwrap_or_else(|| PathBuf::from("rushi.log"));
-        let Ok(file) = File::create(name) else {
-            return;
-        };
-
-        let _ = simplelog::WriteLogger::init(
-            simplelog::LevelFilter::Info,
-            simplelog::Config::default(),
-            file,
-        );
-
-        log::info!("Debug mode enabled");
-    });
-
-    let interpreter = Interpreter::new(Lang::Rust)
-        .change_context(ShardsError::Ast)
-        .attach_printable("failed to start shards. Do you have any langs intalled?")?;
-
-    // let mut env = UserState::new(&args);
-
-    // source user and system config
-    // let mut paths = ConfigPaths::new(&args);
-    // paths.source(&interpreter, &mut env, &mut sys);
-
-    // let (lsp, rx) = Client::start("rust-analyzer", &[""], None, HashMap::new(), 0, "rls", 100)?;
-    // lsp.initialize(true).await?;
-
-    eprintln!("Welcome to Shards!");
-
-    log::info!("Starting main event loop");
-    // let fatal = true;
-    while let Some(line) = crate::line::next() {
-        parse(&interpreter, line)?;
-    }
-
-    // restore_term_foreground_process_group_for_exit();
-
-    Ok(())
-}
 
 #[derive(Debug)]
 pub enum ShardsError {

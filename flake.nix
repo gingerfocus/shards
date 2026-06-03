@@ -12,9 +12,7 @@
       (map (s: lib.mapAttrs (_: v: { ${s} = v; }) (f s)) systems);
   in
     eachSystem (system: let
-      pkgs = import nixpkgs {
-        inherit system;
-      };
+      pkgs = import nixpkgs { inherit system; };
       buildInputs = [];
       pname = "shards";
     in {

@@ -3,6 +3,15 @@ members = [
     "crates/*",
 ]
 resolver = "2"
+default-members = ["crates/shardscli"]
+
+# We want this to be small in production
+[profile.release]
+strip = true      # Automatically strip symbols from the binary.
+opt-level = "z"   # Optimize for size.
+lto = true
+codegen-units = 1
+panic = "abort"
 
 [workspace.dependencies]
 resu = { package = "error-stack", version = "0.5" }

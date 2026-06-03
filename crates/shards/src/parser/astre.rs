@@ -56,7 +56,7 @@ pub struct Loader {
     // is loaded. This means there can be a very brief time when droping the
     // object which this may point to an unloaded library, however as long as
     // drop is not implemented for this it should be fine.
-    func: Symbol<'static, libshards::ParseFuncSig>,
+    func: Symbol<'static, crate::types::ParseFuncSig>,
 }
 
 static PARSE: [u8; 6] = *b"parse\0";
@@ -66,7 +66,7 @@ impl Loader {
         // This function should be limited in what it accepts
         let (_lib, func) = unsafe {
             let lib = Library::new(path).change_context(LoaderError::NoCdylib)?;
-            use libshards::ParseFuncSig;
+            use crate::types::ParseFuncSig;
 
             let func = lib
                 .get::<ParseFuncSig>(&PARSE)
@@ -80,6 +80,6 @@ impl Loader {
     }
 
     pub fn parse(&self, data: &str) -> Option<Ast> {
-        libshards::ParseFunction::parse(&*self.func, data)
+        crate::types::ParseFunction::parse(&*self.func, data)
     }
 }
