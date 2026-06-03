@@ -4,35 +4,52 @@
 // mod exec;
 // mod pipes;
 
+mod ast;
 mod cli;
+// mod jit;
 mod line;
 mod parser;
 mod prelude;
 
+use std::mem;
 use std::{fs::File, io, path::PathBuf};
 
 use crate::prelude::*;
 
-const OPTIMIZATION_LEVEL: u8 = 3;
-
 fn main() -> std::process::ExitCode {
-    let args = RushiArgs::gen();
-
-    args.debug.then(|| logger(args.debug_file));
-
-    // unsafe { libc::setlocale(libc::LC_ALL, b"\0".as_ptr() as *const i8) };
-    // setlocale(LC_ALL, "");
-
-    let interpreter = match Interpreter::new(Lang::Rust) {
-        Ok(i) => i,
+    match shards() {
+        Ok(()) => std::process::ExitCode::SUCCESS,
         Err(e) => {
-            eprintln!(
-                "{:?}",
-                e.attach_printable("failed to start shards. Do you have any langs intalled?")
-            );
+            eprintln!("{:?}", e);
             return std::process::ExitCode::FAILURE;
         }
-    };
+    }
+}
+
+fn shards() -> Result<(), ShardsError> {
+    let args = RushiArgs::gen();
+
+    args.debug.then(|| {
+        let name = args
+            .debug_file
+            .clone()
+            .unwrap_or_else(|| PathBuf::from("rushi.log"));
+        let Ok(file) = File::create(name) else {
+            return;
+        };
+
+        let _ = simplelog::WriteLogger::init(
+            simplelog::LevelFilter::Info,
+            simplelog::Config::default(),
+            file,
+        );
+
+        log::info!("Debug mode enabled");
+    });
+
+    let interpreter = Interpreter::new(Lang::Rust)
+        .change_context(ShardsError::Ast)
+        .attach_printable("failed to start shards. Do you have any langs intalled?")?;
 
     // let mut env = UserState::new(&args);
 
@@ -40,38 +57,18 @@ fn main() -> std::process::ExitCode {
     // let mut paths = ConfigPaths::new(&args);
     // paths.source(&interpreter, &mut env, &mut sys);
 
-    eprintln!("Welcome to Shards!");
-
     // let (lsp, rx) = Client::start("rust-analyzer", &[""], None, HashMap::new(), 0, "rls", 100)?;
     // lsp.initialize(true).await?;
 
+    eprintln!("Welcome to Shards!");
+
     log::info!("Starting main event loop");
-    let fatal = true;
-
+    // let fatal = true;
     while let Some(line) = crate::line::next() {
-        match parse(&interpreter, line) {
-            Ok(_) => {}
-            Err(e) => {
-                eprintln!("{e:?}");
-                if fatal {
-                    return std::process::ExitCode::FAILURE;
-                }
-            }
-        }
+        parse(&interpreter, line)?;
     }
+
     // restore_term_foreground_process_group_for_exit();
-
-    std::process::ExitCode::SUCCESS
-}
-
-fn logger(path: Option<PathBuf>) -> io::Result<()> {
-    // let _ = simplelog::WriteLogger::init(
-    //     simplelog::LevelFilter::Info,
-    //     simplelog::Config::default(),
-    //     File::create(path.clone().unwrap_or_else(|| PathBuf::from("rushi.log")))?,
-    // );
-
-    log::info!("Debug mode enabled");
 
     Ok(())
 }
@@ -91,6 +88,7 @@ impl fmt::Display for ShardsError {
 }
 impl Context for ShardsError {}
 
+// const OPTIMIZATION_LEVEL: u8 = 3;
 fn parse(inter: &Interpreter, input: String) -> Result<(), ShardsError> {
     log::info!("read line from stdin");
 
@@ -98,16 +96,31 @@ fn parse(inter: &Interpreter, input: String) -> Result<(), ShardsError> {
         .loader
         .parse(&input)
         .ok_or(Report::new(ShardsError::Ast))?;
+
     log::info!("Got some ast");
 
-    let mut optc = OpCode::from(ast);
+    // let mut j = jit::JIT::new();
+    //
+    // j.create_data("hello_string", "hello world!\0".as_bytes().to_vec())
+    //     .unwrap();
+    //
+    // // Pass the string to the JIT, and it returns a raw pointer to machine code.
+    // let code = j.compile(&input).unwrap();
 
-    for _ in 0..=OPTIMIZATION_LEVEL {
-        optc.reduce();
-    }
-    let bytes = ByteCode::from(optc);
+    // Cast the raw pointer to a typed function pointer. This is unsafe, because
+    // this is the critical point where you have to trust that the generated code
+    // is safe to be called.
 
-    inter.eval(bytes).change_context(ShardsError::Run)?;
+    // let code = unsafe { mem::transmute::<_, fn() -> ()>(code) };
+    // code();
+
+    // let mut optc = OpCode::from(ast);
+    // for _ in 0..=OPTIMIZATION_LEVEL {
+    //     optc.reduce();
+    // }
+    // let bytes = ByteCode::from(optc);
+    //
+    // inter.eval(bytes).change_context(ShardsError::Run)?;
 
     Ok(())
 }

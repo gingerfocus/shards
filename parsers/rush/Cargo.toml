@@ -1,8 +1,0 @@
-[workspace]
-members = ["rush", "rush-core", "rush-shard"]
-resolver = "2"
-
-[workspace.dependencies]
-# libshards = { path = "../../crates/libshards/" }
-resu = { package = "error-stack", version = "0.4" }
-log = "0.4"

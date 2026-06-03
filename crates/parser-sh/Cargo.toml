@@ -13,7 +13,7 @@ codegen-units = 1
 panic = "abort"
 
 [dependencies]
-rush-core = { path = "../rush-core/" }
+# rush-core = { path = "../rush-core/" }
 # os_pipe = "1.1"
 # duct = "0.13"
 # nix = { version = "0.28", features = ["fs", "user"] }

@@ -1,16 +1,11 @@
 [workspace]
 members = [
-    # "parsers/rushi",
-    # "parsers/rush/rush*",
-    "crates/libshards*",
-    # "crates/shardslsp",
-    "shards",
+    "crates/*",
 ]
 resolver = "2"
 
 [workspace.dependencies]
-libshards = { path = "crates/libshards" }
 resu = { package = "error-stack", version = "0.5" }
 log = "0.4"
-cranelift = "0.112"
+# cranelift = "0.112"
 # libc = "0.2"

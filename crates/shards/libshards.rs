@@ -19,18 +19,42 @@
 // #![feature(vec_into_raw_parts)]
 
 pub type ParseFuncSig = fn(*const u8, usize) -> libshards_sys::ShardsAst;
+
 /// Marker Trait
 pub trait ParseFunction {
     fn parse(&self, data: &str) -> Option<Ast>;
 }
+
 impl ParseFunction for ParseFuncSig {
     fn parse(&self, data: &str) -> Option<Ast> {
-        todo!()
-
-        // self(data.as_ptr(), data.len())
-        //     .try_into()
-        //     .map_err(|e| log::error!("{e:?}"))
-        //     .ok()
+        return Some(Ast {
+            tokens: vec![
+                Token::Operation(Operation::ScriptCall {
+                    name: "echo".to_owned(),
+                    args: vec!["hello".to_owned(), "world".to_owned()],
+                }),
+                Token::Operation(Operation::ScriptCall {
+                    name: "ls".to_owned(),
+                    args: vec!["-a".to_owned()],
+                }),
+            ],
+        });
+        // let ast = self(data.as_ptr(), data.len());
+        // if ast.state == libshards_sys::ShardsAstState_Errors {
+        //     let err = ast.infos.error;
+        //     match err {
+        //         libshards_sys::ShardsParseError_Invalid => {},
+        //         libshards_sys::ShardsParseError_BadToken => {},
+        //         _ => {}
+        //     }
+        //     return None;
+        // } else {
+        //     let data = ast.infos.datas;
+        //     data.ptr
+        //
+        // }
+        // .map_err(|e| log::error!("{e:?}"))
+        return None;
     }
 }
 
@@ -126,7 +150,8 @@ pub enum Identifier {
 pub enum Operation {
     /// A script to call passed as its raw parts
     ScriptCall {
-        name: String, /* args: Vec<String> */
+        name: String,
+        args: Vec<String>,
     },
     Add,
     Subtract,
