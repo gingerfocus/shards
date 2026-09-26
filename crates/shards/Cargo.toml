@@ -8,6 +8,9 @@ libc = "0.2"
 simplelog = "0.12"
 
 libloading = "0.8"
+parser-rust = { path = "../parser-rust" }
+parser-sh = { path = "../parser-sh" }
+parser-julia = { path = "../parser-julia" }
 
 # tree-sitter = "0.22"
 # tree-sitter-rust = "0.21"

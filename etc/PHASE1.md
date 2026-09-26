@@ -44,8 +44,8 @@ Cranelift JIT execution. Establishes all shared types and interfaces.
 
 ### Week 2: Parser Extension (`src/parse.rs`)
 
-- [ ] Reuse `rush_core::lexer::Lexer` for tokenization
-- [ ] Reuse `rush_core::walker::Walker` for token→TreeItem
+- [ ] Reuse `parser_sh::lexer::Lexer` for tokenization
+- [ ] Reuse `parser_sh::walker::Walker` for token→TreeItem
 - [ ] Extend `Token` types (in this crate, not upstream):
   - [ ] `keyword::Let`, `keyword::For`, `keyword::In`, `keyword::Fn`
   - [ ] `TypeAnnotation`: `@i8`, `@i16`, `@i32`, `@i64`, `@f32`, `@f64`
@@ -73,7 +73,7 @@ Cranelift JIT execution. Establishes all shared types and interfaces.
 
 ### Week 3: Scalar Cranelift Codegen (`src/codegen/scalar.rs`)
 
-- [ ] Port working code from `shards/src/jit.rs` (lines 1-462)
+- [ ] Port working code from `crates/shards/src/jit.rs` (lines 1-462)
 - [ ] Adapters:
   - [ ] IR `ScalarType` → Cranelift `types::Type`
   - [ ] IR `Const` → Cranelift `iconst`/`f64const`

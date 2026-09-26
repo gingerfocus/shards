@@ -1,16 +1,211 @@
-fn main() {
-    let line = next().unwrap();
-    println!("hello: {line}");
+mod cli;
+
+use clap::Parser;
+use std::io::{IsTerminal, Read};
+use std::process::ExitCode;
+
+use shards::julia::{Event as JuliaEvent, Session as JuliaSession};
+use shards::language::Language;
+use shards::shell::{Event as ShellEvent, Session as ShSession};
+
+struct Frontend {
+    language: Language,
+    sh: ShSession,
+    julia: JuliaSession,
+    status: i32,
+    exit: bool,
+}
+
+impl Frontend {
+    fn new(language: Language) -> Self {
+        Self {
+            language,
+            sh: ShSession::default(),
+            julia: JuliaSession::default(),
+            status: 0,
+            exit: false,
+        }
+    }
+
+    fn prompt(&self) -> &'static str {
+        match self.language {
+            Language::Rust => "shards:rust> ",
+            Language::Sh => "shards:sh> ",
+            Language::Julia => "shards:julia> ",
+        }
+    }
+
+    fn run_line(&mut self, line: &str) -> std::result::Result<(), String> {
+        let line = line.trim();
+        if line.is_empty()
+            || (self.language == Language::Rust && line.starts_with("//"))
+            || (self.language == Language::Sh && line.starts_with('#'))
+            || (self.language == Language::Julia && line.starts_with('#'))
+        {
+            return Ok(());
+        }
+
+        match self.language {
+            Language::Rust => {
+                let call = parser_rust::parse_call(line).map_err(|error| error.to_string())?;
+                if call.program == "shards" {
+                    match call.args.as_slice() {
+                        [command, name] if command == "lang" => {
+                            self.language = Language::parse(name).ok_or_else(|| {
+                                "shards: expected `shards(lang, sh|rust|julia)`".to_owned()
+                            })?;
+                            self.status = 0;
+                        }
+                        _ => {
+                            return Err("shards: expected `shards(lang, sh|rust|julia)`".to_owned())
+                        }
+                    }
+                } else if call.program == "exit" && call.args.is_empty() {
+                    self.exit = true;
+                    self.status = 0;
+                } else {
+                    self.status =
+                        shards::rushi::run_call(call).map_err(|error| error.to_string())?;
+                }
+            }
+            Language::Sh => match self.sh.run_line(line).map_err(|error| error.to_string())? {
+                ShellEvent::Continue(status) => self.status = status,
+                ShellEvent::Switch(language) => {
+                    self.language = language;
+                    self.status = 0;
+                }
+                ShellEvent::Exit(status) => {
+                    self.status = status;
+                    self.exit = true;
+                }
+            },
+            Language::Julia => match self
+                .julia
+                .run_line(line)
+                .map_err(|error| error.to_string())?
+            {
+                JuliaEvent::Continue(status) => self.status = status,
+                JuliaEvent::Switch(language) => {
+                    self.language = language;
+                    self.status = 0;
+                }
+                JuliaEvent::Exit(status) => {
+                    self.status = status;
+                    self.exit = true;
+                }
+            },
+        }
+        Ok(())
+    }
+}
+
+fn main() -> ExitCode {
+    let args = cli::ShardsArgs::parse();
+    let mut frontend = Frontend::new(Language::parse(&args.lang).unwrap());
+
+    if let Some(command) = args.command {
+        return run_source(&command, &mut frontend);
+    }
+
+    if let Some(path) = args.file {
+        let mut source = String::new();
+        let result = if path.as_os_str() == "-" {
+            std::io::stdin().read_to_string(&mut source)
+        } else {
+            std::fs::read_to_string(&path).map(|text| {
+                source = text;
+                source.len()
+            })
+        };
+        return match result {
+            Ok(_) => run_source(&source, &mut frontend),
+            Err(error) => {
+                eprintln!("shards: {}: {error}", path.display());
+                ExitCode::FAILURE
+            }
+        };
+    }
+
+    if args.interactive || std::io::stdin().is_terminal() {
+        while let Some(line) = next(frontend.prompt()) {
+            if let Err(error) = frontend.run_line(&line) {
+                eprintln!("{error}");
+                frontend.status = 1;
+            }
+            if frontend.exit {
+                break;
+            }
+        }
+        exit_code(frontend.status)
+    } else {
+        let mut source = String::new();
+        match std::io::stdin().read_to_string(&mut source) {
+            Ok(_) => run_source(&source, &mut frontend),
+            Err(error) => {
+                eprintln!("shards: stdin: {error}");
+                ExitCode::FAILURE
+            }
+        }
+    }
+}
+
+fn exit_code(status: i32) -> ExitCode {
+    ExitCode::from(if status < 0 { 1 } else { status.min(255) as u8 })
+}
+
+fn run_source(source: &str, frontend: &mut Frontend) -> ExitCode {
+    for line in source.lines() {
+        if let Err(error) = frontend.run_line(line) {
+            eprintln!("{error}");
+            return ExitCode::FAILURE;
+        }
+        if frontend.exit {
+            break;
+        }
+    }
+    exit_code(frontend.status)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::{Frontend, Language};
+
+    #[test]
+    fn switches_parsers_in_one_session() {
+        let mut frontend = Frontend::new(Language::Rust);
+        frontend.run_line("shards(lang, sh)").unwrap();
+        assert_eq!(frontend.language, Language::Sh);
+
+        frontend.run_line("shards lang rust").unwrap();
+        assert_eq!(frontend.language, Language::Rust);
+
+        frontend.run_line("shards(lang, julia)").unwrap();
+        assert_eq!(frontend.language, Language::Julia);
+        frontend.run_line("value = \"remembered\"").unwrap();
+        frontend.run_line("shards(lang, sh)").unwrap();
+        assert_eq!(frontend.language, Language::Sh);
+        frontend.run_line("shards lang julia").unwrap();
+        assert_eq!(frontend.language, Language::Julia);
+        frontend.run_line("string(value)").unwrap();
+    }
+
+    #[test]
+    fn julia_exit_sets_process_status() {
+        let mut frontend = Frontend::new(Language::Julia);
+        frontend.run_line("exit(7)").unwrap();
+        assert!(frontend.exit);
+        assert_eq!(frontend.status, 7);
+    }
 }
 
 use std::fmt;
 
 use resu::{Context, Result, ResultExt};
 
-pub fn next() -> Option<String> {
+pub fn next(prompt: &str) -> Option<String> {
     loop {
         crossterm::terminal::enable_raw_mode().unwrap();
-        let res = readline("$> ");
+        let res = readline(prompt);
         crossterm::terminal::disable_raw_mode().unwrap();
 
         match res {
@@ -227,7 +422,12 @@ fn readline(prompt: &str) -> Result<ReadlineOutput, PromptError> {
                 // Most keys no one cares about
                 _ => InsertResult::None,
             },
-            E::Paste(_) => unimplemented!(),
+            E::Paste(pasted) => {
+                for ch in pasted.chars() {
+                    buff.push(ch);
+                }
+                InsertResult::Render
+            }
             E::Resize(_, _) => InsertResult::Render,
             E::FocusGained | E::FocusLost | E::Mouse(_) => InsertResult::None,
         };

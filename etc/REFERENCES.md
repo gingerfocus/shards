@@ -101,7 +101,7 @@ bytemuck = "1"     # safe casting for GPU buffer data
 | `parsers/rush/rush-core/src/walker.rs` | Token→TreeItem (structured tokens) | Shell DSL parser input |
 | `parsers/rush/rush/src/parse.rs` | TreeItem→Cmd (parse shell syntax) | Reference for parser design |
 | `parsers/rush/rush/src/drive.rs` | Spawn processes with pipes | Reference for OS integration |
-| `shards/src/jit.rs` | Cranelift JIT (lines 1-462) | Scalar codegen template |
-| `shards/src/ast.rs` | Toy language AST (Expr enum) | Reference for IR design |
+| `crates/shards/src/jit.rs` | Cranelift JIT (lines 1-462) | Scalar codegen template |
+| `crates/shards/src/ast.rs` | Toy language AST (Expr enum) | Reference for IR design |
 | `crates/libshards-sys/shards.h` | C ABI AST interchange | Reference for FFI crossing |
-| `shards/src/pipes/fds.rs` | AutoCloseFd, pipe creation | Reference for FD management |
+| `crates/shards/src/pipes/fds.rs` | AutoCloseFd, pipe creation | Reference for FD management |

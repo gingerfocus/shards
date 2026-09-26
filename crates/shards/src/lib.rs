@@ -15,9 +15,13 @@
 // mod pipes;
 
 mod ast;
+pub mod julia;
+pub mod language;
 // mod jit;
 mod parser;
 mod prelude;
+pub mod rushi;
+pub mod shell;
 mod types;
 
 use crate::prelude::*;

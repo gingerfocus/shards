@@ -3,6 +3,14 @@ name = "shardscli"
 version = "0.1.0"
 edition = "2021"
 
+[[bin]]
+name = "shards"
+path = "src/main.rs"
+
+[[test]]
+name = "language_levels"
+path = "../../tests/language_levels.rs"
+
 
 [dependencies]
 crossterm = "0.27"
@@ -11,6 +19,7 @@ clap = { version = "4", features = ["derive"] }
 anyhow = "1.0"
 
 shards = { path = "../shards" }
+parser-rust = { path = "../parser-rust" }
 simplelog = "0.12"
 # libc = "0.2"
 

@@ -1,17 +1,13 @@
 [package]
-name = "rush"
+name = "parser-sh"
 version = "0.1.0"
 authors = ["focus172 <evan.stokdyk@gmail.com>"]
 edition = "2021"
 
-[dependencies]
-# rush-core = { path = "../rush-core/" }
-# os_pipe = "1.1"
-# duct = "0.13"
-# nix = { version = "0.28", features = ["fs", "user"] }
+[lib]
+name = "parser_sh"
+path = "src/core/lib.rs"
 
+[dependencies]
 resu.workspace = true
 log.workspace = true
-libc = "0.2"
-clap = { version = "4", features = ["derive"] }
-crossterm = "0.27"

@@ -276,6 +276,22 @@ dependencies = [
 ]
 
 [[package]]
+name = "parser-julia"
+version = "0.1.0"
+
+[[package]]
+name = "parser-rust"
+version = "0.1.0"
+
+[[package]]
+name = "parser-sh"
+version = "0.1.0"
+dependencies = [
+ "error-stack",
+ "log",
+]
+
+[[package]]
 name = "powerfmt"
 version = "0.2.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -306,17 +322,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "ed2bf2547551a7053d6fdfafda3f938979645c44812fbfcda098faae3f1a362d"
 dependencies = [
  "bitflags",
-]
-
-[[package]]
-name = "rush"
-version = "0.1.0"
-dependencies = [
- "clap",
- "crossterm",
- "error-stack",
- "libc",
- "log",
 ]
 
 [[package]]
@@ -368,6 +373,9 @@ dependencies = [
  "libc",
  "libloading",
  "log",
+ "parser-julia",
+ "parser-rust",
+ "parser-sh",
  "simplelog",
 ]
 
@@ -380,6 +388,7 @@ dependencies = [
  "crossterm",
  "error-stack",
  "log",
+ "parser-rust",
  "shards",
  "simplelog",
 ]
